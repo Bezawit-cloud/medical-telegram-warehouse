@@ -1,0 +1,25 @@
+# Secrets
+.env
+
+# Logs
+logs/
+*.log
+
+# Data (images and JSON)
+data/raw/
+data/raw/images/
+data/raw/telegram_messages/2026-01-19/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.env/
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+src/
