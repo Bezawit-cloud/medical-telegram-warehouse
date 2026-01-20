@@ -24,3 +24,29 @@ venv/
 .ipynb_checkpoints/
 src/
 logs/
+/target/                # compiled dbt files
+/dbt_modules/           # installed dbt packages
+*.pyc                   # Python compiled files
+__pycache__/            # Python cache
+.env or .venv           # virtual environment (if exists)
+profiles.yml            # if it contains real DB credentials
+medical_warehouse/.*        # compiled dbt SQL
+medical_warehouse/dbt_modules/     # installed dbt packages
+*.pyc                              # python compiled files
+__pycache__/                        # python cache
+.venv or .env                       # python virtual environment
+medical_warehouse/profiles.yml      # contains DB credentials
+medical_warehouse/.user.yml         # local user settings
+# dbt compiled files
+medical_warehouse_dbt/target/
+medical_warehouse_dbt/dbt_modules/
+
+# Local configs
+medical_warehouse/profiles.yml
+medical_warehouse/.user.yml
+
+# Python
+*.pyc
+__pycache__/
+.venv
+.env

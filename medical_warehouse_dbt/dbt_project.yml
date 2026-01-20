@@ -1,0 +1,14 @@
+name: 'medical_warehouse'
+version: '1.0'
+config-version: 2
+
+profile: 'medical_warehouse'  # must match your profiles.yml
+
+model-paths: ["models"]
+
+models:
+  medical_warehouse:
+    staging:
+      +schema: staging
+    marts:
+      +schema: marts
