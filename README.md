@@ -1,91 +1,54 @@
-# Medical Telegram Data Warehouse Project
+# Ethiopian Medical Telegram Analytics Pipeline
 
-This project extracts messages and images from **Telegram channels** related to Ethiopian medical businesses, stores them in a **raw data lake**, and transforms them into a clean, structured **data warehouse** using **dbt**.  
-It demonstrates a full **Extract → Load → Transform (ELT)** pipeline, from raw data collection to analytics-ready tables.
+> End-to-end pipeline to scrape messages and images from Ethiopian medical Telegram channels, transform them into a clean data warehouse, enrich images with YOLO object detection, serve analytics via a REST API, and orchestrate all tasks with Dagster.
 
----
+This project implements a complete workflow: 
 
-## Task 1: Data Scraping and Collection
+1. **Data Scraping:** Extract messages and images from channels like [Chemed](https://t.me/lobelia4cosmetics) and [Tikvah Pharma](https://t.me/tikvahpharma). For each message, capture `message_id`, `date`, `text_content`, `view_count`, `forward_count`, and media info. Images are downloaded to `data/raw/images/{channel_name}/{message_id}.jpg` and messages saved as JSON in `data/raw/telegram_messages/YYYY-MM-DD/{channel_name}.json`. All scraping activities and errors are logged in `logs/`.
 
-### Objective
-Build a pipeline to extract Telegram messages and media, storing them in a raw data lake for further processing.
+2. **Data Transformation:** Load raw JSON into PostgreSQL (`raw.telegram_messages`). Clean and standardize data with dbt staging models, casting types, renaming columns, filtering invalid records, and adding calculated fields (`message_length`, `has_image`). Transform into a **star schema**: `dim_channels` (channel info), `dim_dates` (date dimension), `fct_messages` (fact table with message metrics). dbt tests include unique, not_null, relationships, plus custom tests (`assert_no_future_messages`, `assert_positive_views`). Documentation is generated via `dbt docs serve`.
 
-### Implementation
-- Python script (`src/scraper.py`) uses **Telethon** to scrape messages from public Telegram channels.
-- Extracted data is stored as **JSON files** in a **partitioned folder structure**:
+3. **Data Enrichment:** Run YOLOv8 nano model on downloaded images (`src/yolo_detect.py`) to detect objects and assign classifications: `promotional` (person + product), `product_display` (product only), `lifestyle` (person only), `other` (neither). Results are saved with confidence scores and integrated into `fct_image_detections` joined with messages for analytics.
 
-- Images are downloaded and organized by channel and message ID:
+4. **Analytical API:** FastAPI exposes endpoints for business insights:
+   - `/api/reports/top-products?limit=10` – Most mentioned products/terms.
+   - `/api/channels/{channel_name}/activity` – Channel posting trends.
+   - `/api/search/messages?query=paracetamol&limit=20` – Search messages by keyword.
+   - `/api/reports/visual-content` – Statistics on image usage.  
+   API uses Pydantic validation, error handling, and OpenAPI docs available at `/docs`.
 
-- Logs of scraping activity, including errors and progress, are saved in `logs/`.
+5. **Pipeline Orchestration:** Dagster automates the workflow: `scrape_telegram_data → load_raw_to_postgres → run_dbt_transformations → run_yolo_enrichment`. Supports scheduling, monitoring via UI (`http://localhost:3000`), logs, and alerts for failures.
 
-### Collected Data Fields
-- Message ID  
-- Message date  
-- Message text  
-- View count  
-- Forward count  
-- Media information (if available)  
-
----
-
-## Task 2: Data Modeling and Transformation
-
-### Objective
-Transform raw, messy data into a clean, structured **data warehouse** optimized for analysis using **dbt** and a **star schema**.
-
-### Implementation Steps
-
-1. **Load Raw Data into PostgreSQL**  
-   - Python script reads JSON files from the data lake  
-   - Loads data into `raw.telegram_messages` table
-
-2. **Staging Models** (`models/staging/`)  
-   - Clean and standardize raw data  
-   - Cast data types correctly (dates, integers, etc.)  
-   - Rename columns for consistency  
-   - Filter invalid records (empty messages, nulls)  
-   - Add calculated fields like `message_length` and `has_image`  
-
-3. **Star Schema** (`models/marts/`)  
-
-**Dimension Tables**
-- `dim_channels`: Telegram channel information  
-  - Fields: `channel_key`, `channel_name`, `channel_type`, `first_post_date`, `last_post_date`, `total_posts`, `avg_views`
-- `dim_dates`: Date information for analytics  
-  - Fields: `date_key`, `full_date`, `day_of_week`, `week_of_year`, `month_name`, `quarter`, `year`, `is_weekend`
-
-**Fact Table**
-- `fct_messages`: One row per message  
-  - Fields: `message_id`, `channel_key` (FK), `date_key` (FK), `message_text`, `message_length`, `view_count`, `forward_count`, `has_image`
-
-4. **dbt Tests**  
-   - Built-in: `unique`, `not_null`, `relationships`  
-   - Custom:  
-     - `assert_no_future_messages` → ensures no messages have future dates  
-     - `assert_positive_views` → ensures view counts are non-negative  
-
-5. **Documentation**  
-   - Generated with `dbt docs generate`  
-   - Served with `dbt docs serve`  
-   - Includes descriptions, lineage, and schema details
+**Project Structure:**
+├── api/ # FastAPI app
+├── data/raw/ # JSON messages & images
+├── logs/ # Scraper & pipeline logs
+├── models/ # dbt staging & marts
+├── src/
+│ ├── scraper.py # Telegram scraper
+│ └── yolo_detect.py # YOLO object detection
+├── tests/ # dbt custom tests
+├── pipeline.py # Dagster pipeline
+├── README.md
+└── requirements.txt
+**Setup & Installation:**
+```bash
+pip install -r requirements.txt
+pip install dbt-postgres
+dbt init medical_warehouse
+pip install dagster dagster-webserver
+pip install fastapi uvicorn SQLAlchemy
+Usage:
+python src/scraper.py             # Run scraper
+python src/load_raw.py            # Load JSON to PostgreSQL
+dbt run && dbt test               # Run dbt transformations and tests
+python src/yolo_detect.py         # YOLO image enrichment
+uvicorn api.main:app --reload     # Start API server
+dagster dev -f pipeline.py        # Run Dagster pipeline
+** Insights: Compare views for promotional vs product_display posts, identify channels with most visual content, and note limitations of pre-trained YOLO models for domain-specific detection**
 
 ---
 
-## Evidence / Screenshots
-- **dbt tests passing:** _Insert screenshot here_  
-- **dbt docs lineage:** _Insert screenshot here_  
-- **Star schema diagram:** _Insert diagram here_  
-- **Raw data lake folder structure:** _Insert screenshot here_
-
----
-
-## Project Status
-- Task 1 ✅ Completed  
-- Task 2 ✅ Completed  
-- All dbt tests ✅ Passed  
-- Analytics-ready warehouse built and documented
-
----
 
 
 
