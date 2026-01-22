@@ -1,54 +1,119 @@
-# Ethiopian Medical Telegram Analytics Pipeline
+# Ethiopian Medical Telegram Data Pipeline
 
-> End-to-end pipeline to scrape messages and images from Ethiopian medical Telegram channels, transform them into a clean data warehouse, enrich images with YOLO object detection, serve analytics via a REST API, and orchestrate all tasks with Dagster.
-
-This project implements a complete workflow: 
-
-1. **Data Scraping:** Extract messages and images from channels like [Chemed](https://t.me/lobelia4cosmetics) and [Tikvah Pharma](https://t.me/tikvahpharma). For each message, capture `message_id`, `date`, `text_content`, `view_count`, `forward_count`, and media info. Images are downloaded to `data/raw/images/{channel_name}/{message_id}.jpg` and messages saved as JSON in `data/raw/telegram_messages/YYYY-MM-DD/{channel_name}.json`. All scraping activities and errors are logged in `logs/`.
-
-2. **Data Transformation:** Load raw JSON into PostgreSQL (`raw.telegram_messages`). Clean and standardize data with dbt staging models, casting types, renaming columns, filtering invalid records, and adding calculated fields (`message_length`, `has_image`). Transform into a **star schema**: `dim_channels` (channel info), `dim_dates` (date dimension), `fct_messages` (fact table with message metrics). dbt tests include unique, not_null, relationships, plus custom tests (`assert_no_future_messages`, `assert_positive_views`). Documentation is generated via `dbt docs serve`.
-
-3. **Data Enrichment:** Run YOLOv8 nano model on downloaded images (`src/yolo_detect.py`) to detect objects and assign classifications: `promotional` (person + product), `product_display` (product only), `lifestyle` (person only), `other` (neither). Results are saved with confidence scores and integrated into `fct_image_detections` joined with messages for analytics.
-
-4. **Analytical API:** FastAPI exposes endpoints for business insights:
-   - `/api/reports/top-products?limit=10` – Most mentioned products/terms.
-   - `/api/channels/{channel_name}/activity` – Channel posting trends.
-   - `/api/search/messages?query=paracetamol&limit=20` – Search messages by keyword.
-   - `/api/reports/visual-content` – Statistics on image usage.  
-   API uses Pydantic validation, error handling, and OpenAPI docs available at `/docs`.
-
-5. **Pipeline Orchestration:** Dagster automates the workflow: `scrape_telegram_data → load_raw_to_postgres → run_dbt_transformations → run_yolo_enrichment`. Supports scheduling, monitoring via UI (`http://localhost:3000`), logs, and alerts for failures.
-
-**Project Structure:**
-├── api/ # FastAPI app
-├── data/raw/ # JSON messages & images
-├── logs/ # Scraper & pipeline logs
-├── models/ # dbt staging & marts
-├── src/
-│ ├── scraper.py # Telegram scraper
-│ └── yolo_detect.py # YOLO object detection
-├── tests/ # dbt custom tests
-├── pipeline.py # Dagster pipeline
-├── README.md
-└── requirements.txt
-**Setup & Installation:**
-```bash
-pip install -r requirements.txt
-pip install dbt-postgres
-dbt init medical_warehouse
-pip install dagster dagster-webserver
-pip install fastapi uvicorn SQLAlchemy
-Usage:
-python src/scraper.py             # Run scraper
-python src/load_raw.py            # Load JSON to PostgreSQL
-dbt run && dbt test               # Run dbt transformations and tests
-python src/yolo_detect.py         # YOLO image enrichment
-uvicorn api.main:app --reload     # Start API server
-dagster dev -f pipeline.py        # Run Dagster pipeline
-** Insights: Compare views for promotional vs product_display posts, identify channels with most visual content, and note limitations of pre-trained YOLO models for domain-specific detection**
+This project implements a complete, production-style data pipeline for analyzing Ethiopian medical Telegram channels. The pipeline scrapes messages and images, transforms raw data into a structured data warehouse, enriches images using computer vision, exposes analytics through a REST API, and orchestrates the entire workflow using Dagster.
 
 ---
 
+## What This Project Does
 
+The pipeline performs five tightly integrated tasks:
 
+• Scrapes messages and images from public Ethiopian medical Telegram channels  
+• Stores raw data in a structured data lake (JSON + images)  
+• Transforms raw data into a clean PostgreSQL data warehouse using dbt  
+• Enriches image data using YOLO object detection  
+• Exposes analytical insights via a FastAPI service  
+• Automates everything using Dagster orchestration  
+
+This ensures the data is **reliable, testable, observable, and production-ready**.
+
+---
+
+## Data Sources
+
+Public Telegram channels related to Ethiopian medical businesses, including:
+
+- Chemed  
+- Lobelia Cosmetics  
+- Tikvah Pharma  
+- Additional channels from https://et.tgstat.com/medicine  
+
+---
+
+## Pipeline Architecture
+
+Telegram → Raw Data Lake → PostgreSQL (Raw)
+→ dbt Staging → dbt Star Schema
+→ YOLO Image Enrichment
+→ Analytical API (FastAPI)
+→ Orchestrated with Dagster
+
+---
+
+## Repository Structure
+
+api/ FastAPI analytical API
+data/raw/ Raw JSON files and images
+logs/ Scraping and pipeline logs
+models/ dbt staging and mart models
+src/ Scraper and YOLO scripts
+tests/ Custom dbt data tests
+pipeline.py Dagster pipeline definition
+
+---
+
+## Task Summary
+
+### Task 1 – Data Scraping & Collection
+- Extract message ID, date, text, views, forwards, and media info
+- Download images per channel and message
+- Store raw data as JSON partitioned by date and channel
+- Log scraping activity and errors
+
+### Task 2 – Data Modeling & Transformation
+- Load raw JSON into PostgreSQL (`raw.telegram_messages`)
+- Clean and standardize data using dbt staging models
+- Build a **star schema**:
+  - `dim_channels`
+  - `dim_dates`
+  - `fct_messages`
+- Enforce data quality with dbt tests
+- Generate dbt documentation
+
+### Task 3 – Image Enrichment (YOLO)
+- Run YOLOv8 object detection on scraped images
+- Detect objects and confidence scores
+- Classify images as:
+  - promotional
+  - product_display
+  - lifestyle
+  - other
+- Store results in `fct_image_detections`
+
+### Task 4 – Analytical API
+FastAPI exposes warehouse insights through REST endpoints:
+- Top mentioned products
+- Channel activity trends
+- Keyword-based message search
+- Visual content statistics  
+Includes Pydantic validation and OpenAPI documentation.
+
+### Task 5 – Pipeline Orchestration
+- Dagster coordinates the entire workflow
+- Ensures correct execution order
+- Supports scheduling, logging, monitoring, and failure alerts
+
+---
+
+## How to Run
+
+```bash
+# Scrape Telegram data
+python src/scraper.py
+
+# Load raw data to PostgreSQL
+python src/load_raw.py
+
+# Run dbt transformations and tests
+dbt run
+dbt test
+
+# Run YOLO image detection
+python src/yolo_detect.py
+
+# Start API server
+uvicorn api.main:app --reload
+
+# Launch Dagster
+dagster dev -f pipeline.py
 
