@@ -1,6 +1,6 @@
 # Ethiopian Medical Telegram Data Pipeline
 
-This project implements a complete, production-style data pipeline for analyzing Ethiopian medical Telegram channels. The pipeline scrapes messages and images, transforms raw data into a structured data warehouse, enriches images using computer vision, exposes analytics through a REST API, and orchestrates the entire workflow using Dagster.
+This project implements a complete, production-style data pipeline for analyzing Ethiopian medical Telegram channels. The pipeline scrapes messages and images, transforms raw data into a structured data warehouse, enriches images using computer vision, exposes analytics through a FAST API, and orchestrates the entire workflow using Dagster.
 
 ---
 
@@ -116,4 +116,5 @@ uvicorn api.main:app --reload
 
 # Launch Dagster
 dagster dev -f pipeline.py
+
 
