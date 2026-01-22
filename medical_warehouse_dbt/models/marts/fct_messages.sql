@@ -1,14 +1,11 @@
 select
     m.message_id,
-    c.channel_key,
-    d.date_key,
-    m.message_text,
-    m.message_length,
-    m.view_count,
-    m.forward_count,
-    m.has_image
+    d.channel_key,
+    m.message_date,
+    length(m.message_text) as message_length,
+    m.has_media,
+    m.views,
+    m.forwards
 from {{ ref('stg_telegram_messages') }} m
-join {{ ref('dim_channels') }} c
-    on m.channel_name = c.channel_name
-join {{ ref('dim_dates') }} d
-    on m.date_posted::date = d.full_date
+join {{ ref('dim_channels') }} d
+  on m.channel_name = d.channel_name

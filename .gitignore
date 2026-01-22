@@ -50,3 +50,5 @@ medical_warehouse/.user.yml
 __pycache__/
 .venv
 .env
+.dbt/
+data/

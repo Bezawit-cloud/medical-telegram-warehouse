@@ -1,16 +1,19 @@
 with dates as (
-    select generate_series(min(date_posted)::date, max(date_posted)::date, interval '1 day') as full_date
+
+    select
+        generate_series(
+            min(message_date)::date,
+            max(message_date)::date,
+            interval '1 day'
+        ) as date_day
     from {{ ref('stg_telegram_messages') }}
+
 )
+
 select
-    row_number() over () as date_key,
-    full_date,
-    extract(dow from full_date) as day_of_week,
-    to_char(full_date, 'Day') as day_name,
-    extract(week from full_date) as week_of_year,
-    extract(month from full_date) as month,
-    to_char(full_date, 'Month') as month_name,
-    extract(quarter from full_date) as quarter,
-    extract(year from full_date) as year,
-    case when extract(dow from full_date) in (0,6) then true else false end as is_weekend
+    date_day,
+    extract(year from date_day)  as year,
+    extract(month from date_day) as month,
+    extract(day from date_day)   as day,
+    extract(dow from date_day)   as day_of_week
 from dates

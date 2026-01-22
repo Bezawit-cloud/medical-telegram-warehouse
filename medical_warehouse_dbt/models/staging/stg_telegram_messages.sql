@@ -1,18 +1,12 @@
-with raw as (
-    select *
-    from raw.telegram_messages
-)
-
+-- models/staging/stg_telegram_messages.sql
 select
     message_id,
-    channel_name,
+    channel_name,              -- 👈 MUST EXIST HERE
+    message_date,
     message_text,
-    message_date as date_posted,
-    coalesce(views, 0)::int as view_count,
-    coalesce(forwards, 0)::int as forward_count,
-    has_media as has_image,
-    length(message_text) as message_length
-from raw
-where message_text is not null
-
+    has_media,
+    media_type,
+    views,
+    forwards
+from {{ source('raw', 'telegram_messages') }}
 
